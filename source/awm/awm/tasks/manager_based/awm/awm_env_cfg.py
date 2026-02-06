@@ -368,7 +368,7 @@ class AwmEnvCfg(ManagerBasedRLEnvCfg):
 
     def __post_init__(self) -> None:
         self.decimation = 2
-        self.episode_length_s = 10.0
+        self.episode_length_s = 30.0
         self.viewer.eye = (8.0, 0.0, 5.0)
         self.sim.dt = 1 / 120
         self.sim.render_interval = self.decimation
