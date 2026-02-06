@@ -8,3 +8,9 @@ HYDRA_FULL_ERROR=1 python scripts/rsl_rl/train.py --task Template-Awm_Manager-v0
 
 # To play the trained policy 
 HYDRA_FULL_ERROR=1 python scripts/rsl_rl/play.py --task Template-Awm_Manager-v0 --num_envs 10 --checkpoint /home/shashwat/awm_manager/logs/rsl_rl/awm_manager/2026-02-05_12-55-55/model_250.pt
+
+# To see the tensorboard logs 
+tensorboard --logdir logs/rsl_rl/awm_manager
+
+# To see envs name
+python scripts/list_envs.py

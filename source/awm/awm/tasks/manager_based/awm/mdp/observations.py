@@ -42,18 +42,6 @@ def leg_actions(env, num_wheels: int) -> torch.Tensor:
     return env.action_manager.action[:, num_wheels:]
 
 
-def height_scan(env, sensor_name: str = "height_scanner") -> torch.Tensor:
-    sensor = env.scene.sensors[sensor_name]
-    ray_hits = sensor.data.ray_hits_w[..., 2]
-    heights = ray_hits - sensor.data.pos_w[:, 2:3]
-    return torch.nan_to_num(heights, nan=0.0, posinf=0.0, neginf=0.0)
-
-
-def height_scan_multi(env, sensor_names: list[str]) -> torch.Tensor:
-    scans = [height_scan(env, name) for name in sensor_names]
-    return torch.cat(scans, dim=1)
-
-
 def wheel_contact_forces(env, sensor_name: str = "contact_forces", body_names: str | list[str] = "wheel_.*") -> torch.Tensor:
     sensor = env.scene.sensors[sensor_name]
     body_ids, _ = sensor.find_bodies(body_names, preserve_order=True)

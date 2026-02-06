@@ -16,7 +16,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
@@ -57,30 +57,33 @@ AWM_ROBOT_CFG = ArticulationCfg(
             "wheel_F_R": 0.0,
             "wheel_B_R": 0.0,
             "wheel_B_L": 0.0,
+            # "leg_F_L": 0.0,
+            # "leg_F_R": 0.0,
+            # "leg_B_L": 0.0,
+            # "leg_B_R": 0.0,
             "leg_F_L": -2.53,
             "leg_F_R": -2.53,
             "leg_B_L": -2.53,
             "leg_B_R": -2.53,
         },
     ),
-    actuators={
-        "wheel_drive": ImplicitActuatorCfg(
-            joint_names_expr=["wheel_.*"],
-            effort_limit=20000.0,
-            velocity_limit=100.0,
-            stiffness=0.0,
-            damping=20000.0,
-        ),
-        "legs": ImplicitActuatorCfg(
-            joint_names_expr=["leg_.*"],
-            # effort_limit=5000.0,
-            effort_limit_sim=15000.0,
-            # velocity_limit=10.0,
-            velocity_limit_sim=10.0,
-            stiffness=5000.0,
-            damping=50.0,
-        ),
-    },
+actuators={
+    "wheel_drive": ImplicitActuatorCfg(
+        joint_names_expr=["wheel_.*"],
+        effort_limit_sim=1.5,      # N*m (XM430-W210 conservative)
+        velocity_limit_sim=4.0,    # rad/s (~76 rpm)
+        stiffness=0.0,             # velocity-controlled wheel
+        damping=15.0,
+    ),
+    "legs": ImplicitActuatorCfg(
+        joint_names_expr=["leg_.*"],
+        effort_limit_sim=0.45,     # N*m (XL330-M288 conservative - )
+        velocity_limit_sim=8.0,   # rad/s - 103RPM with 5V supply
+        stiffness=60.0,            # position control
+        damping=4.0,
+    ),
+},
+
 )
 
 
@@ -97,7 +100,7 @@ class AwmSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",
         terrain_generator=ROUGH_TERRAINS_CFG,
-        max_init_terrain_level=0,
+        max_init_terrain_level=None,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -117,39 +120,6 @@ class AwmSceneCfg(InteractiveSceneCfg):
     )
 
     robot: ArticulationCfg = AWM_ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-    height_scanner_fl = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/awm/leg",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 1.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.GridPatternCfg(resolution=1.0, size=(1.0, 1.0)),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-    height_scanner_fr = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/awm/leg_2",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 1.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.GridPatternCfg(resolution=1.0, size=(1.0, 1.0)),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-    height_scanner_bl = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/awm/leg_3",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 1.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.GridPatternCfg(resolution=1.0, size=(1.0, 1.0)),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-    height_scanner_br = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/awm/leg_4",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 1.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.GridPatternCfg(resolution=1.0, size=(1.0, 1.0)),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
 
     contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/awm/.*",
@@ -177,8 +147,8 @@ class ActionsCfg:
         asset_name="robot",
         wheel_joint_names=["wheel_F_L", "wheel_F_R", "wheel_B_R", "wheel_B_L"],
         leg_joint_names=["leg_F_L", "leg_F_R", "leg_B_L", "leg_B_R"],
-        max_wheel_speed=20.0,
-        leg_offset=2.5,
+        max_wheel_speed=4.0,
+        leg_offset=0.5,
     )
 
 
@@ -190,7 +160,7 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        distance_to_goal = ObsTerm(func=mdp.distance_to_goal, params={"goal_distance": 2.0})
+        distance_to_goal = ObsTerm(func=mdp.distance_to_goal, params={"goal_distance": 8.0})
         base_lin_vel_x = ObsTerm(func=mdp.base_lin_vel_x)
         mean_wheel_speed = ObsTerm(
             func=mdp.mean_wheel_speed,
@@ -200,6 +170,7 @@ class ObservationsCfg:
                 )
             },
         )
+
         mean_leg_pos = ObsTerm(
             func=mdp.mean_leg_pos,
             params={
@@ -209,17 +180,7 @@ class ObservationsCfg:
             },
         )
         leg_actions = ObsTerm(func=mdp.leg_actions, params={"num_wheels": 4})
-        height_scan = ObsTerm(
-            func=mdp.height_scan_multi,
-            params={
-                "sensor_names": [
-                    "height_scanner_fl",
-                    "height_scanner_fr",
-                    "height_scanner_bl",
-                    "height_scanner_br",
-                ]
-            },
-        )
+
         wheel_contact_forces = ObsTerm(
             func=mdp.wheel_contact_forces,
             params={"sensor_name": "contact_forces", "body_names": "wheel_.*"},
@@ -285,58 +246,12 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    alive = RewTerm(func=mdp.is_alive, weight=0.01)
-    progress = RewTerm(func=mdp.progress_to_goal, weight=1.0, params={"goal_distance": 2.0})
+    progress = RewTerm(func=mdp.progress_to_goal, weight=1.0, params={"goal_distance": 8.0})
     goal_bonus = RewTerm(
         func=mdp.goal_reached_bonus,
         weight=10.0,
-        params={"goal_distance": 2.0, "goal_radius": 0.5},
+        params={"goal_distance": 8.0, "goal_radius": 1},
     )
-    leg_extend_flat = RewTerm(
-        func=mdp.leg_extension_penalty_flat,
-        weight=-0.2,
-        params={
-            "sensor_names": [
-                "height_scanner_fl",
-                "height_scanner_fr",
-                "height_scanner_bl",
-                "height_scanner_br",
-            ],
-            "var_scale": 50.0,
-            "asset_cfg": SceneEntityCfg("robot", joint_names=["leg_F_L", "leg_F_R", "leg_B_L", "leg_B_R"]),
-        },
-    )
-    leg_extend_rough = RewTerm(
-        func=mdp.leg_extension_reward_rough,
-        weight=0.5,
-        params={
-            "sensor_names": [
-                "height_scanner_fl",
-                "height_scanner_fr",
-                "height_scanner_bl",
-                "height_scanner_br",
-            ],
-            "var_scale": 50.0,
-            "asset_cfg": SceneEntityCfg("robot", joint_names=["leg_F_L", "leg_F_R", "leg_B_L", "leg_B_R"]),
-        },
-    )
-    leg_extend_slip = RewTerm(
-        func=mdp.leg_extension_reward_on_slip,
-        weight=0.4,
-        params={
-            "wheel_radius": 0.1,
-            "slip_threshold": 0.1,
-            "min_speed": 0.05,
-            "wheel_asset_cfg": SceneEntityCfg(
-                "robot", joint_names=["wheel_F_L", "wheel_F_R", "wheel_B_R", "wheel_B_L"]
-            ),
-            "leg_asset_cfg": SceneEntityCfg(
-                "robot", joint_names=["leg_F_L", "leg_F_R", "leg_B_L", "leg_B_R"]
-            ),
-        },
-    )
-    straightness_lat = RewTerm(func=mdp.lateral_velocity_penalty, weight=-0.05)
-    straightness_yaw = RewTerm(func=mdp.yaw_rate_penalty, weight=-0.02)
 
 
 @configclass
@@ -344,7 +259,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    goal_reached = DoneTerm(func=mdp.goal_reached, params={"goal_distance": 2.0, "goal_radius": 0.5})
+    goal_reached = DoneTerm(func=mdp.goal_reached, params={"goal_distance": 8.0, "goal_radius": 1})
 
 
 # ----------------------------------------------------------------------------
@@ -363,8 +278,8 @@ class AwmEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
 
-    goal_distance: float = 2.0
-    goal_radius: float = 0.5
+    goal_distance: float = 8.0
+    goal_radius: float = 1.0
 
     def __post_init__(self) -> None:
         self.decimation = 2
