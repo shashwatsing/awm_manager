@@ -79,6 +79,6 @@ class AwmDriveActionCfg(ActionTermCfg):
     asset_name: str = MISSING
     wheel_joint_names: list[str] = MISSING
     leg_joint_names: list[str] = MISSING
-    max_wheel_speed: float = 20.0
-    leg_offset: float = 0.05
+    max_wheel_speed: float = 4.0
+    leg_offset: float = 0.5
     debug_vis: bool = False

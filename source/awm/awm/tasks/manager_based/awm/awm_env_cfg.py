@@ -57,14 +57,14 @@ AWM_ROBOT_CFG = ArticulationCfg(
             "wheel_F_R": 0.0,
             "wheel_B_R": 0.0,
             "wheel_B_L": 0.0,
-            # "leg_F_L": 0.0,
-            # "leg_F_R": 0.0,
-            # "leg_B_L": 0.0,
-            # "leg_B_R": 0.0,
-            "leg_F_L": -2.53,
-            "leg_F_R": -2.53,
-            "leg_B_L": -2.53,
-            "leg_B_R": -2.53,
+            "leg_F_L": 0.0,
+            "leg_F_R": 0.0,
+            "leg_B_L": 0.0,
+            "leg_B_R": 0.0,
+            # "leg_F_L": -2.53,
+            # "leg_F_R": -2.53,
+            # "leg_B_L": -2.53,
+            # "leg_B_R": -2.53,
         },
     ),
 actuators={
@@ -77,10 +77,10 @@ actuators={
     ),
     "legs": ImplicitActuatorCfg(
         joint_names_expr=["leg_.*"],
-        effort_limit_sim=0.45,     # N*m (XL330-M288 conservative - )
+        effort_limit_sim=1.0,     # N*m (XL330-M288 conservative - )
         velocity_limit_sim=8.0,   # rad/s - 103RPM with 5V supply
         stiffness=60.0,            # position control
-        damping=4.0,
+        damping=8.0,
     ),
 },
 
@@ -147,7 +147,7 @@ class ActionsCfg:
         asset_name="robot",
         wheel_joint_names=["wheel_F_L", "wheel_F_R", "wheel_B_R", "wheel_B_L"],
         leg_joint_names=["leg_F_L", "leg_F_R", "leg_B_L", "leg_B_R"],
-        max_wheel_speed=4.0,
+        max_wheel_speed=8.0,
         leg_offset=0.5,
     )
 
@@ -160,7 +160,7 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        distance_to_goal = ObsTerm(func=mdp.distance_to_goal, params={"goal_distance": 8.0})
+        distance_to_goal = ObsTerm(func=mdp.distance_to_goal, params={"goal_distance": 5.0})
         base_lin_vel_x = ObsTerm(func=mdp.base_lin_vel_x)
         mean_wheel_speed = ObsTerm(
             func=mdp.mean_wheel_speed,
@@ -250,7 +250,7 @@ class RewardsCfg:
     goal_bonus = RewTerm(
         func=mdp.goal_reached_bonus,
         weight=10.0,
-        params={"goal_distance": 8.0, "goal_radius": 1},
+        params={"goal_distance": 5.0, "goal_radius": 1},
     )
 
 
@@ -259,7 +259,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    goal_reached = DoneTerm(func=mdp.goal_reached, params={"goal_distance": 8.0, "goal_radius": 1})
+    goal_reached = DoneTerm(func=mdp.goal_reached, params={"goal_distance": 5.0, "goal_radius": 1})
 
 
 # ----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ class AwmEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
 
-    goal_distance: float = 8.0
+    goal_distance: float = 5.0
     goal_radius: float = 1.0
 
     def __post_init__(self) -> None:
